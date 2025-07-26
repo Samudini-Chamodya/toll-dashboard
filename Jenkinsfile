@@ -17,10 +17,8 @@ pipeline {
 
         stage('Install Node.js and Build App') {
             steps {
-                echo 'Installing Node.js and building the React app...'
-                sh '''
-                    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-                    sudo apt-get install -y nodejs
+                echo 'Installing Node.js dependencies and building the React app...'
+                bat '''
                     node -v
                     npm -v
                     npm install
@@ -32,16 +30,16 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo 'Building Docker image...'
-                sh 'docker build -t $IMAGE_NAME:$IMAGE_TAG .'
+                bat 'docker build -t %IMAGE_NAME%:%IMAGE_TAG% .'
             }
         }
 
         stage('Stop Existing Container') {
             steps {
                 echo 'Stopping existing container (if any)...'
-                sh '''
-                    docker stop $CONTAINER_NAME || true
-                    docker rm $CONTAINER_NAME || true
+                bat '''
+                    docker stop %CONTAINER_NAME% || exit 0
+                    docker rm %CONTAINER_NAME% || exit 0
                 '''
             }
         }
@@ -49,8 +47,8 @@ pipeline {
         stage('Deploy') {
             steps {
                 echo 'Deploying container...'
-                sh '''
-                    docker run -d -p 3000:80 --name $CONTAINER_NAME $IMAGE_NAME:$IMAGE_TAG
+                bat '''
+                    docker run -d -p 3000:80 --name %CONTAINER_NAME% %IMAGE_NAME%:%IMAGE_TAG%
                 '''
             }
         }
@@ -58,7 +56,7 @@ pipeline {
         stage('Health Check') {
             steps {
                 echo 'Running health check...'
-                sh 'curl -f http://localhost:3000 || exit 1'
+                bat 'powershell -Command "Invoke-WebRequest -Uri http://localhost:3000 -UseBasicParsing | Out-Null" || exit 1'
             }
         }
     }
@@ -70,7 +68,7 @@ pipeline {
         }
         failure {
             echo 'Pipeline failed!'
-            sh 'docker logs $CONTAINER_NAME || true'
+            bat 'docker logs %CONTAINER_NAME% || exit 0'
         }
     }
 }
